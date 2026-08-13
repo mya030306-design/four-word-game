@@ -363,7 +363,8 @@ button:focus-visible {
 }
 .score-item.on { border-color: var(--brand); background: var(--brand-soft); }
 .score-item.on .t, .score-item.on .s { color: var(--brand-dark); }
-.score-item.bump { animation: bump .35s ease; }
+.score-item.bump, .stats .v.bump { animation: bump .35s ease; }
+.stats .v.bump { display: inline-block; }
 @keyframes bump {
   0% { transform: scale(1); }
   40% { transform: scale(1.14); }
@@ -480,7 +481,7 @@ button:focus-visible {
   <section id="screenHome" class="screen active">
 
     <div class="card home-head">
-      <span class="logo">Daeunextier</span>
+      <span class="logo">DaeuAIon</span>
       <h1>4글자 게임</h1>
       <p>팀을 선택하면 바로 시작합니다</p>
     </div>
@@ -554,11 +555,6 @@ button:focus-visible {
       <button class="abtn sub" id="btnNext">다음 문제</button>
       <button class="abtn sub home" id="btnHome">홈</button>
     </div>
-
-    <!-- 점수판 -->
-    <div class="card score-board">
-      <div class="score-grid" id="scoreGame"></div>
-    </div>
   </section>
 
 </div>
@@ -605,12 +601,12 @@ const WORDS = {
     "넷플릭스", "백설공주", "워킹데드", "기니피그", "계좌번호", "오마이걸",
     "텔레비전", "강강술래", "페라가모", "미니언즈", "필라테스", "주경야독",
     "리스테린", "나무늘보", "프리지아", "일석이조", "꿔바로우", "임진왜란",
-    "카네이션", "줄다리기", "타이타닉", "업데이트", "수수방관", "폼클렌징",
+    "카네이션", "줄다리기", "타이타닉", "업데이트", "스파게티", "클라우드",
     "미세먼지", "풀하우스", "프링글스", "라라랜드", "비선실세", "원효대사",
     "뮤직뱅크", "샌드위치", "율곡이이", "소녀시대", "역지사지", "설국열차",
-    "후쿠오카", "또오해영", "클라우드", "샤브샤브", "크로스핏", "박테리아",
+    "후쿠오카", "격세지감", "또오해영", "샤브샤브", "크로스핏", "박테리아",
     "설왕설래", "에픽하이", "와이셔츠", "신데렐라", "헝거게임", "아보카도",
-    "시시비비", "발렌티노", "스파게티", "모자이크", "고진감래", "메가박스",
+    "시시비비", "발렌티노", "폼클렌징", "모자이크", "고진감래", "메가박스",
     "하이에나", "일편단심", "파라과이", "스타트업", "나폴레옹", "페이스북"
   ],
   C: [
@@ -629,7 +625,7 @@ const WORDS = {
   D: [
     "오르막길", "고슴도치", "베르사체", "막상막하", "노르웨이", "명불허전",
     "스케이트", "카푸치노", "포장마차", "용두사미", "허수아비", "비트코인",
-    "만리장성", "어벤져스", "할리갈리", "보노보노", "블루베리", "레드벨벳",
+    "만리장성", "어벤져스", "작심삼일", "보노보노", "블루베리", "레드벨벳",
     "코스모스", "수수께끼", "날다람쥐", "더치페이", "크레파스", "잔다르크",
     "해리포터", "박하사탕", "외유내강", "에버랜드", "십중팔구", "드라이기",
     "신서유기", "바퀴벌레", "신과함께", "봅슬레이", "다사다난", "에콰도르",
@@ -637,7 +633,7 @@ const WORDS = {
     "가가호호", "해수욕장", "빌게이츠", "다이어트", "늑대소년", "찰떡파이",
     "오토바이", "뉴질랜드", "무한도전", "헤이즐넛", "코카콜라", "달의연인",
     "만사형통", "건곤일척", "라즈베리", "쿵푸팬더", "훈민정음", "군계일학",
-    "공소시효", "작심삼일", "이베리코", "에일리언", "스위트홈", "오리무중"
+    "공소시효", "증강현실", "이베리코", "에일리언", "스위트홈", "오리무중"
   ]
 };
 
@@ -898,7 +894,7 @@ function markCorrect() {
   const team = state.currentTeam;
   state.scores[team] += 1;    // 정답은 효과음 없이 조용히 처리한다
   nextWord();                 // 화면을 먼저 갱신한 뒤
-  bumpScore(team);            // 새로 그려진 점수판에 애니메이션을 준다
+  bumpScore();                // 상단 팀 점수에 애니메이션을 준다
 }
 
 /** 땡: 점수 변화 없음, 효과음 재생 후 다음 문제 */
@@ -940,7 +936,7 @@ const els = {};
 
 function cacheElements() {
   const ids = [
-    'screenHome', 'screenGame', 'teamGrid', 'scoreHome', 'scoreGame',
+    'screenHome', 'screenGame', 'teamGrid', 'scoreHome',
     'btnNewGame', 'btnSoundHome',
     'gTeam', 'gNo', 'gTotal', 'gBar', 'gPct', 'gLeft', 'gScore',
     'tNum', 'btnTimerToggle', 'btnTimerReset', 'timeChips',
@@ -1021,10 +1017,9 @@ function renderGame() {
   els.btnNext.disabled    = finished;
 
   renderTimer();
-  renderScoreBoard(els.scoreGame);
 }
 
-/** 점수판(홈/게임 공통) */
+/** 점수판(홈 화면 전용) */
 function renderScoreBoard(container) {
   container.innerHTML = '';
   TEAMS.forEach(team => {
@@ -1038,13 +1033,15 @@ function renderScoreBoard(container) {
   });
 }
 
-/** 점수 올라갈 때 살짝 튀는 피드백 */
-function bumpScore(team) {
-  document.querySelectorAll('.score-item[data-team="' + team + '"]').forEach(el => {
-    el.classList.remove('bump');
-    void el.offsetWidth;          // 리플로우 강제 → 애니메이션 재시작
-    el.classList.add('bump');
-  });
+/**
+ * 점수 올라갈 때 살짝 튀는 피드백.
+ * 게임 화면에는 점수판이 없으므로 상단 '팀 점수' 숫자를 튀게 한다.
+ */
+function bumpScore() {
+  const el = els.gScore;
+  el.classList.remove('bump');
+  void el.offsetWidth;            // 리플로우 강제 → 애니메이션 재시작
+  el.classList.add('bump');
 }
 
 function renderSoundButton() {
