@@ -290,7 +290,7 @@ button:focus-visible {
   text-align: center;
 }
 .word {
-  font-size: clamp(44px, 15vw, 76px);
+  font-size: clamp(52px, 20vw, 100px);
   font-weight: 900;
   letter-spacing: .02em;
   line-height: 1.15;
@@ -300,7 +300,7 @@ button:focus-visible {
 .word-card .hint:empty { display: none; }   /* 문구가 없으면 자리도 차지하지 않게 */
 
 /* 종료 상태 */
-.word-card.finished .word { font-size: clamp(22px, 6.5vw, 30px); color: var(--brand); }
+.word-card.finished .word { font-size: clamp(20px, 5.8vw, 28px); color: var(--brand); }
 .finish-actions { display: none; gap: 8px; margin-top: 4px; }
 .word-card.finished .finish-actions { display: flex; }
 .finish-actions button {
@@ -577,7 +577,8 @@ button:focus-visible {
   .chip { min-height: 34px; }
   .timer-card { padding: 10px 12px; gap: 8px; }
   .g-head { padding: 10px 14px 9px; gap: 8px; }
-  .word-card { min-height: 100px; padding: 12px; }
+  .word-card { min-height: 100px; padding: 8px 12px; }
+  .finish-actions button { padding: 8px 14px; font-size: 13px; }
   .score-board { padding: 7px; }
   .score-item { padding: 5px 4px; }
   .score-item .s { font-size: 19px; }
@@ -633,6 +634,15 @@ button:focus-visible {
       </div>
     </div>
 
+    <!-- 단어 -->
+    <div class="card word-card" id="wordCard">
+      <div class="word" id="wordText">준비</div>
+      <div class="hint" id="wordHint"></div>
+      <div class="finish-actions">
+        <button id="btnReplayTeam">이 팀 다시하기</button>
+      </div>
+    </div>
+
     <!-- 타이머 -->
     <div class="card timer-card">
       <div class="timer-top">
@@ -647,15 +657,6 @@ button:focus-visible {
         <button class="chip on" data-sec="60">60초</button>
         <button class="chip" data-sec="90">90초</button>
         <button class="chip" data-sec="120">120초</button>
-      </div>
-    </div>
-
-    <!-- 단어 -->
-    <div class="card word-card" id="wordCard">
-      <div class="word" id="wordText">준비</div>
-      <div class="hint" id="wordHint"></div>
-      <div class="finish-actions">
-        <button id="btnReplayTeam">이 팀 다시하기</button>
       </div>
     </div>
 
