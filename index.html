@@ -493,10 +493,13 @@ button:focus-visible {
   border-radius: 14px;
   border: 2px solid var(--line);
   background: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--muted);
+  padding: 0 4px;
+  white-space: nowrap;
 }
+.ubtn.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-dark); }
 .ubtn:active { transform: scale(.97); }
 .ubtn.danger { color: var(--ng); border-color: #FFD9D9; }
 
@@ -610,6 +613,7 @@ button:focus-visible {
     </div>
 
     <div class="utils">
+      <button class="ubtn" id="btnShuffle">🔀 무작위</button>
       <button class="ubtn" id="btnSoundHome">🔊 소리 켜짐</button>
       <button class="ubtn danger" id="btnNewGame">새 게임 시작</button>
     </div>
@@ -798,6 +802,8 @@ const defaultState = () => ({
   progress: { A: 0, B: 0, C: 0, D: 0 },   // 팀별 현재 문제 인덱스(0부터)
   correct:  { A: [], B: [], C: [], D: [] },  // 팀별 '정답' 처리한 단어 목록
   wrong:    { A: [], B: [], C: [], D: [] },  // 팀별 '땡' 처리한 단어 목록
+  order:    { A: null, B: null, C: null, D: null }, // 팀별 출제 순서(섞인 인덱스 배열)
+  shuffle:  true,                         // 무작위 출제 on/off
   currentTeam: null,                      // 진행 중인 팀 (null이면 홈)
   timerTotal: 60,                         // 설정된 제한 시간(초)
   timerLeft: 60,                          // 남은 시간(초)
@@ -833,6 +839,7 @@ function loadState() {
     state.progress = Object.assign({ A: 0, B: 0, C: 0, D: 0 }, saved.progress);
     state.correct  = Object.assign({ A: [], B: [], C: [], D: [] }, saved.correct);
     state.wrong    = Object.assign({ A: [], B: [], C: [], D: [] }, saved.wrong);
+    state.order    = Object.assign({ A: null, B: null, C: null, D: null }, saved.order);
   } catch (e) {
     console.warn('불러오기 실패', e);
     state = defaultState();
@@ -1025,8 +1032,45 @@ function setTimerTotal(sec) {
 /* ============================================================
    [게임 진행]
    ============================================================ */
+
+/**
+ * 배열을 무작위로 섞는다 (피셔-예이츠).
+ * 뒤에서부터 임의의 앞 요소와 맞바꿔, 모든 순열이 같은 확률로 나온다.
+ */
+function shuffled(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * 해당 팀의 출제 순서를 새로 만든다.
+ * 단어 자체가 아니라 '인덱스 배열'을 저장하므로, 나중에 엑셀 단어를 바꿔도
+ * 개수만 같으면 순서 정보가 그대로 유효하다.
+ */
+function makeOrder(team) {
+  const idx = WORDS[team].map((_, i) => i);
+  state.order[team] = state.shuffle ? shuffled(idx) : idx;
+}
+
+/**
+ * 저장된 순서가 쓸 수 있는 상태인지 확인하고, 아니면 새로 만든다.
+ * (처음 시작 / 단어 개수가 바뀐 경우 / 저장값이 깨진 경우)
+ */
+function ensureOrder(team) {
+  const o = state.order[team];
+  if (!Array.isArray(o) || o.length !== WORDS[team].length) makeOrder(team);
+}
+
+/** 현재 팀의 단어를 '출제 순서대로' 돌려준다 */
 function currentWords() {
-  return WORDS[state.currentTeam] || [];
+  const team = state.currentTeam;
+  if (!team || !WORDS[team]) return [];
+  ensureOrder(team);
+  return state.order[team].map(i => WORDS[team][i]);
 }
 
 function isFinished() {
@@ -1036,6 +1080,10 @@ function isFinished() {
 /** 팀 게임 시작(또는 이어하기) */
 function startTeam(team) {
   state.currentTeam = team;
+  // 아직 한 문제도 풀지 않았다면 순서를 새로 섞는다.
+  // 진행 중이던 팀은 순서를 유지해야 이어하기가 어긋나지 않는다.
+  if (state.progress[team] === 0) makeOrder(team);
+  else ensureOrder(team);
   resetTimer();
   saveState();
   showScreen('game');
@@ -1083,10 +1131,11 @@ function replayTeam() {
   state.progress[state.currentTeam] = 0;
   state.correct[state.currentTeam] = [];  // 맞힌 단어 기록도 함께 비운다
   state.wrong[state.currentTeam] = [];    // 틀린 단어 기록도 함께 비운다
+  makeOrder(state.currentTeam);           // 순서도 새로 섞는다
   resetTimer();
   saveState();
   renderGame();
-  showToast('처음 문제부터 다시 시작');
+  showToast(state.shuffle ? '순서를 새로 섞었습니다' : '처음 문제부터 다시 시작');
 }
 
 function goHome() {
@@ -1172,7 +1221,7 @@ const els = {};
 function cacheElements() {
   const ids = [
     'screenHome', 'screenGame', 'screenReview', 'teamGrid', 'scoreHome',
-    'btnNewGame', 'btnSoundHome',
+    'btnNewGame', 'btnSoundHome', 'btnShuffle',
     'gTeam', 'gNo', 'gTotal', 'gBar', 'gPct', 'gLeft', 'gScore',
     'tNum', 'btnTimerToggle', 'btnTimerReset', 'timeChips',
     'wordCard', 'wordText', 'wordHint', 'btnReplayTeam',
@@ -1286,6 +1335,8 @@ function bumpScore() {
 
 function renderSoundButton() {
   els.btnSoundHome.textContent = state.soundOn ? '🔊 소리 켜짐' : '🔈 소리 꺼짐';
+  els.btnShuffle.textContent = state.shuffle ? '🔀 무작위' : '📋 엑셀 순서';
+  els.btnShuffle.classList.toggle('on', state.shuffle);
 }
 
 /* ============================================================
@@ -1336,6 +1387,17 @@ function bindEvents() {
     if (state.soundOn && ensureAudio()) {
       strikeBar(1046.50, audioCtx.currentTime, 0.40, 0.40);
     }
+  });
+
+  // 무작위 출제 토글 — 아직 시작 전인 팀은 순서를 바로 다시 만든다
+  els.btnShuffle.addEventListener('click', () => {
+    state.shuffle = !state.shuffle;
+    TEAMS.forEach(team => {
+      if (state.progress[team] === 0) makeOrder(team);
+    });
+    renderSoundButton();
+    saveState();
+    showToast(state.shuffle ? '무작위 순서로 출제합니다' : '엑셀 순서로 출제합니다');
   });
 
   // 새 게임 시작 — 브라우저 confirm 대신 화면 안 확인 창을 쓴다
